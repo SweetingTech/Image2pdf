@@ -14,10 +14,10 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-For tests, also install:
+On Windows, you can also use the startup script. It checks for an existing `.venv` or `venv` folder, creates `.venv` when needed, installs dependencies, and starts the GUI:
 
 ```powershell
-python -m pip install pytest pypdf
+.\Start-Image2pdf.ps1
 ```
 
 ## CLI Usage
@@ -50,13 +50,23 @@ Run:
 python image2pdf_gui.py
 ```
 
-The GUI lets you choose individual images, an input folder, an output folder, an output title, combined or split output, page size, sorting, overwrite behavior, and invalid-file handling.
+Or use the setup/startup script:
+
+```powershell
+.\Start-Image2pdf.ps1
+```
+
+The GUI lets you choose individual images, add one or more input folders to a queue, set one shared output folder, override queued output titles when needed, choose combined or split output, page size, sorting, overwrite behavior, and invalid-file handling.
+
+Queued folder jobs run one after another. By default, each folder job uses the folder name as the output PDF title. Unicode names, including Japanese folder and file names, are supported by Python paths and are preserved in generated PDF filenames where the operating system allows them.
+
+On Windows, the GUI supports dragging files or folders onto the drop zone. If drag and drop is not available in your environment, use Add Images or Add Folder.
 
 ## Page Ordering
 
 By default, images stay in the exact order supplied on the command line. Glob patterns are expanded inside Python so behavior is consistent on Windows and other platforms. When multiple glob arguments are used, each glob expands in place.
 
-Folder ingestion is non-recursive in this version. Folder images are appended after explicitly selected files.
+Folder ingestion is non-recursive in this version. Folder images are appended after explicitly selected files. Folder ingestion uses deterministic natural filename ordering so page-numbered files are not dependent on filesystem enumeration order.
 
 Use `--sort` to apply natural sorting:
 
@@ -87,16 +97,23 @@ By default, missing, corrupted, unsupported, or unreadable images stop the conve
 - HEIC support is optional and depends on extra Pillow/runtime support installed on your machine. It is not promised by default.
 - Multi-frame GIF and TIFF files are treated as one input image in this version.
 - Folder ingestion is non-recursive.
+- Drag and drop depends on Windows desktop shell support. Use Add Images or Add Folder if it is unavailable.
 - Image2pdf does not do OCR, image editing, cloud uploads, accounts, or telemetry.
 
 ## Test Plan
 
-Automated tests live in `tests/test_image2pdf.py`.
+This repository may keep local validation tests in ignored `test/` or `tests/` folders. Those folders are intentionally excluded from GitHub by `.gitignore`.
 
-Run them with:
+When local tests are present, run:
 
 ```powershell
 python -m pytest
+```
+
+The main project validation command is:
+
+```powershell
+.\scripts\Validate-GoalLite.ps1
 ```
 
 Manual checks:
@@ -112,4 +129,5 @@ Manual checks:
 - EXIF-rotated images convert successfully.
 - A4, Letter, and original page size modes create valid PDFs.
 - Split mode creates one PDF per image.
-- The GUI opens and can convert selected files or a selected input folder.
+- The GUI opens, queues multiple folders, uses one output folder, and converts queued jobs one after another.
+- Folder names with Japanese characters are preserved as default output titles.

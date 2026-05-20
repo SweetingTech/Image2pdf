@@ -84,11 +84,14 @@ def expand_inputs(inputs: Iterable[str], input_dir: Path | None = None, sort: bo
             raise Image2PdfError(f"Input directory does not exist: {input_dir}")
         if not input_dir.is_dir():
             raise Image2PdfError(f"Input directory is not a directory: {input_dir}")
-        folder_images = [
-            item
-            for item in input_dir.iterdir()
-            if item.is_file() and item.suffix.casefold() in COMMON_IMAGE_EXTENSIONS
-        ]
+        folder_images = sorted(
+            [
+                item
+                for item in input_dir.iterdir()
+                if item.is_file() and item.suffix.casefold() in COMMON_IMAGE_EXTENSIONS
+            ],
+            key=lambda item: natural_key(item.name),
+        )
         paths.extend(folder_images)
 
     if sort:
