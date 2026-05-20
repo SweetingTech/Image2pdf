@@ -19,6 +19,7 @@ test_*.py
 
 # Local output artifacts
 *.pdf
+image2pdf_settings.yaml
 tmp/
 temp/
 out/

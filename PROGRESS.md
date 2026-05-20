@@ -4,7 +4,7 @@
 
 - Overall status: `Milestone 4 blocked`
 - Current milestone: `Milestone 4: Documentation and final validation`
-- Current checkpoint: `README and Git ignore policy updated; final Bash validation still blocked by Python version`
+- Current checkpoint: `Persistent settings window and logo added; final Bash validation still blocked by Python version`
 - Last updated: `2026-05-20`
 
 ## Current hypothesis
@@ -18,6 +18,8 @@ Folder-based input now uses deterministic natural ordering by default, and the G
 The GUI now has a toolbar/drop-zone layout, a shared output folder, queued folder/image jobs, per-item status, progress tracking, default folder-name titles, title override for selected queue items, and Japanese/Unicode title coverage.
 
 README.md now documents the startup script, GUI queue workflow, shared output folder behavior, folder-name output titles, Windows drag/drop fallback, and Japanese/Unicode filename support. `.gitignore` excludes local test folders/files and generated Python/cache/output artifacts; `tests/test_image2pdf.py` was removed from Git's index only so it remains available locally for validation without being included in future GitHub pushes.
+
+The Settings toolbar button now opens a real settings window. Saved settings are written to local `image2pdf_settings.yaml`, loaded on GUI startup, and applied to output folder, output mode, page size, standardization, natural sort, overwrite, and skip-invalid behavior. The settings file is ignored by Git. A root `image2pdf_logo.png` app/logo asset was added and is used as the Tk window icon when supported.
 
 ## Completed milestones
 
@@ -126,6 +128,7 @@ What passed:
 
 - `.\\.venv\\Scripts\\python.exe -m py_compile image2pdf.py image2pdf_core.py image2pdf_gui.py`
 - `.\\.venv\\Scripts\\python.exe -m pytest tests/test_image2pdf.py -q`
+- Settings YAML round-trip smoke
 - `./scripts/Validate-GoalLite.ps1`
 
 What failed:
@@ -206,6 +209,42 @@ What was fixed:
 - Local test folders/files are ignored and should not be included in future GitHub pushes.
 - README now matches the current startup and queued GUI behavior.
 
+### Settings and logo checkpoint
+
+Tasks:
+
+- [x] Read README.md, PROGRESS.md, GUI source, ignore rules, and repository status.
+- [x] Keep Settings toolbar button and make it open a real settings window.
+- [x] Persist GUI settings to local `image2pdf_settings.yaml` without adding PyYAML or other runtime dependencies.
+- [x] Load saved settings on GUI startup and apply them to future conversions.
+- [x] Ignore user-specific settings in `.gitignore`.
+- [x] Add root `image2pdf_logo.png` asset and use it as the window icon when Tkinter supports it.
+- [x] Update README.md with settings and logo behavior.
+- [x] Run focused and global validation.
+
+Files touched this checkpoint:
+
+- `image2pdf_gui.py` - added settings load/save helpers, Settings pop-out window, startup settings application, and logo icon loading.
+- `.gitignore` - ignored `image2pdf_settings.yaml` as local user state.
+- `README.md` - documented saved settings, local settings file, no PyYAML requirement, and root logo asset.
+- `image2pdf_logo.png` - added root app/logo asset.
+- `PROGRESS.md` - recorded settings/logo work and validation.
+
+What passed:
+
+- `.\\.venv\\Scripts\\python.exe -m py_compile image2pdf.py image2pdf_core.py image2pdf_gui.py`
+- `.\\.venv\\Scripts\\python.exe -m pytest tests/test_image2pdf.py -q`
+- `./scripts/Validate-GoalLite.ps1`
+
+What failed:
+
+- None in this checkpoint.
+
+What was fixed:
+
+- Settings now open, save to disk, load on restart, and drive conversion defaults.
+- The app now has a root logo asset and attempts to use it as the Tkinter window icon.
+
 Files touched this checkpoint:
 
 - `VALIDATION.md` - documented Python 3.11+ interpreter enforcement.
@@ -257,6 +296,10 @@ What was fixed:
 | 2026-05-20 | `.\\.venv\\Scripts\\python.exe -m py_compile image2pdf.py image2pdf_core.py image2pdf_gui.py` | pass | README/gitignore checkpoint compile check passed. |
 | 2026-05-20 | `.\\.venv\\Scripts\\python.exe -m pytest tests/test_image2pdf.py -q` | pass | Local ignored test run: 21 tests passed. |
 | 2026-05-20 | `./scripts/Validate-GoalLite.ps1` | pass | Dependencies verified, modules compiled, 21 pytest tests passed from local ignored tests, CLI help and generated-image smoke tests passed. |
+| 2026-05-20 | `.\\.venv\\Scripts\\python.exe -m py_compile image2pdf.py image2pdf_core.py image2pdf_gui.py` | pass | Settings/logo checkpoint compile check passed. |
+| 2026-05-20 | `.\\.venv\\Scripts\\python.exe -m pytest tests/test_image2pdf.py -q` | pass | Local ignored focused run: 20 passed, 1 skipped due local Tk availability check. |
+| 2026-05-20 | Settings YAML round-trip smoke | pass | Saved and loaded settings with a Japanese output path using a temporary YAML file. |
+| 2026-05-20 | `./scripts/Validate-GoalLite.ps1` | pass | Dependencies verified, modules compiled, 21 pytest tests passed, CLI help and generated-image smoke tests passed. |
 
 ## Known blockers
 
@@ -272,7 +315,7 @@ What was fixed:
 
 ## Next action
 
-Use `./Start-Image2pdf.ps1` to set up and launch the GUI. Add folders to the queue, keep the shared output folder set, and start the queue. Before pushing, confirm ignored local test folders remain untracked. For final project completion, install or expose Python 3.11+ in the Bash/WSL environment, then rerun `bash ./scripts/validate.sh` and final validation.
+Use `./Start-Image2pdf.ps1` to set up and launch the GUI. Add folders to the queue, configure defaults through Settings, keep the shared output folder set, and start the queue. Before pushing, confirm ignored local test folders remain untracked. For final project completion, install or expose Python 3.11+ in the Bash/WSL environment, then rerun `bash ./scripts/validate.sh` and final validation.
 
 ## Completion checklist based on README.md
 

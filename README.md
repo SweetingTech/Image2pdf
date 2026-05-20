@@ -62,6 +62,10 @@ Queued folder jobs run one after another. By default, each folder job uses the f
 
 On Windows, the GUI supports dragging files or folders onto the drop zone. If drag and drop is not available in your environment, use Add Images or Add Folder.
 
+The Settings button opens a saved settings window. It can persist the default output folder, output mode, page size, standardization, natural sorting, overwrite behavior, and invalid-file handling. Settings are saved locally to `image2pdf_settings.yaml` in the project folder and loaded the next time the GUI starts. The file is ignored by Git because it is user-specific local state.
+
+The root `image2pdf_logo.png` asset is used as the app logo/window icon when supported by Tkinter.
+
 ## Page Ordering
 
 By default, images stay in the exact order supplied on the command line. Glob patterns are expanded inside Python so behavior is consistent on Windows and other platforms. When multiple glob arguments are used, each glob expands in place.
@@ -98,6 +102,7 @@ By default, missing, corrupted, unsupported, or unreadable images stop the conve
 - Multi-frame GIF and TIFF files are treated as one input image in this version.
 - Folder ingestion is non-recursive.
 - Drag and drop depends on Windows desktop shell support. Use Add Images or Add Folder if it is unavailable.
+- `image2pdf_settings.yaml` is a simple app-written YAML-style settings file. It does not require PyYAML or any extra dependency.
 - Image2pdf does not do OCR, image editing, cloud uploads, accounts, or telemetry.
 
 ## Test Plan
@@ -131,3 +136,4 @@ Manual checks:
 - Split mode creates one PDF per image.
 - The GUI opens, queues multiple folders, uses one output folder, and converts queued jobs one after another.
 - Folder names with Japanese characters are preserved as default output titles.
+- GUI settings can be saved, loaded on restart, and used for later conversions.

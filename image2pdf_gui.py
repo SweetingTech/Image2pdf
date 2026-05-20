@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import json
 import platform
 import queue
 import threading
@@ -12,6 +13,21 @@ from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageDraw, ImageTk
 
 from image2pdf_core import COMMON_IMAGE_EXTENSIONS, ConversionOptions, Image2PdfError, convert_images
+
+
+APP_ROOT = Path(__file__).resolve().parent
+SETTINGS_PATH = APP_ROOT / "image2pdf_settings.yaml"
+LOGO_PATH = APP_ROOT / "image2pdf_logo.png"
+
+DEFAULT_SETTINGS: dict[str, object] = {
+    "output_dir": str(Path.cwd()),
+    "mode": "combined",
+    "page_size": "A4",
+    "standardize": True,
+    "sort": True,
+    "overwrite": False,
+    "skip_invalid": False,
+}
 
 
 @dataclass
@@ -123,17 +139,19 @@ class Image2PdfApp(ttk.Frame):
 
         self.selected_files: list[Path] = []
         self.input_dir = tk.StringVar()
-        self.output_dir = tk.StringVar(value=str(Path.cwd()))
+        self.saved_settings = load_settings()
+        self.output_dir = tk.StringVar(value=str(self.saved_settings["output_dir"]))
         self.title = tk.StringVar()
-        self.mode = tk.StringVar(value="combined")
-        self.page_size = tk.StringVar(value="A4")
-        self.standardize = tk.BooleanVar(value=True)
-        self.sort = tk.BooleanVar(value=True)
-        self.overwrite = tk.BooleanVar(value=False)
-        self.skip_invalid = tk.BooleanVar(value=False)
+        self.mode = tk.StringVar(value=str(self.saved_settings["mode"]))
+        self.page_size = tk.StringVar(value=str(self.saved_settings["page_size"]))
+        self.standardize = tk.BooleanVar(value=bool(self.saved_settings["standardize"]))
+        self.sort = tk.BooleanVar(value=bool(self.saved_settings["sort"]))
+        self.overwrite = tk.BooleanVar(value=bool(self.saved_settings["overwrite"]))
+        self.skip_invalid = tk.BooleanVar(value=bool(self.saved_settings["skip_invalid"]))
         self.status = tk.StringVar(value="Ready. Add folders or drop them into the queue.")
 
         self._build()
+        self._apply_window_logo()
         self.drop_handler = WindowsDropHandler(master, self.add_dropped_paths)
 
     def _build(self) -> None:
@@ -183,7 +201,7 @@ class Image2PdfApp(ttk.Frame):
             ("add", "Add", self.add_images),
             ("remove", "Remove", self.remove_selected),
             ("folder", "Add Folder", self.choose_input_dir),
-            ("settings", "Settings", self.focus_options),
+            ("settings", "Settings", self.open_settings),
             ("help", "Help", self.show_help),
             ("start", "Start", self.convert),
             ("exit", "Exit", self.master.destroy),
@@ -410,6 +428,113 @@ class Image2PdfApp(ttk.Frame):
     def focus_options(self) -> None:
         self.status.set("Adjust output folder and options, then start the queue.")
 
+    def _apply_window_logo(self) -> None:
+        if not LOGO_PATH.exists():
+            return
+        try:
+            self.logo_image = tk.PhotoImage(file=str(LOGO_PATH))
+            self.master.iconphoto(True, self.logo_image)
+        except tk.TclError:
+            pass
+
+    def open_settings(self) -> None:
+        window = tk.Toplevel(self.master)
+        window.title("Image2pdf Settings")
+        window.transient(self.master)
+        window.grab_set()
+        window.resizable(False, False)
+        window.configure(background="#d8d8d2")
+
+        settings_output_dir = tk.StringVar(value=self.output_dir.get())
+        settings_mode = tk.StringVar(value=self.mode.get())
+        settings_page_size = tk.StringVar(value=self.page_size.get())
+        settings_standardize = tk.BooleanVar(value=self.standardize.get())
+        settings_sort = tk.BooleanVar(value=self.sort.get())
+        settings_overwrite = tk.BooleanVar(value=self.overwrite.get())
+        settings_skip_invalid = tk.BooleanVar(value=self.skip_invalid.get())
+
+        content = ttk.Frame(window, padding=16)
+        content.grid(row=0, column=0, sticky="nsew")
+        content.columnconfigure(1, weight=1)
+
+        ttk.Label(content, text="Output folder").grid(row=0, column=0, sticky="w", pady=4, padx=(0, 8))
+        ttk.Entry(content, textvariable=settings_output_dir, width=48).grid(row=0, column=1, sticky="ew", pady=4)
+        ttk.Button(
+            content,
+            text="Browse",
+            command=lambda: self._choose_settings_output_dir(settings_output_dir),
+        ).grid(row=0, column=2, sticky="e", padx=(8, 0), pady=4)
+
+        ttk.Label(content, text="Output mode").grid(row=1, column=0, sticky="w", pady=4, padx=(0, 8))
+        ttk.Combobox(
+            content,
+            textvariable=settings_mode,
+            values=("combined", "split"),
+            width=18,
+            state="readonly",
+        ).grid(row=1, column=1, sticky="w", pady=4)
+
+        ttk.Label(content, text="Page size").grid(row=2, column=0, sticky="w", pady=4, padx=(0, 8))
+        ttk.Combobox(
+            content,
+            textvariable=settings_page_size,
+            values=("A4", "Letter", "original"),
+            width=18,
+            state="readonly",
+        ).grid(row=2, column=1, sticky="w", pady=4)
+
+        checks = ttk.Frame(content)
+        checks.grid(row=3, column=0, columnspan=3, sticky="w", pady=(10, 4))
+        ttk.Checkbutton(checks, text="Standardize pages", variable=settings_standardize).grid(row=0, column=0, sticky="w", padx=(0, 18))
+        ttk.Checkbutton(checks, text="Natural sort", variable=settings_sort).grid(row=0, column=1, sticky="w", padx=(0, 18))
+        ttk.Checkbutton(checks, text="Overwrite existing PDFs", variable=settings_overwrite).grid(row=1, column=0, sticky="w", padx=(0, 18), pady=(6, 0))
+        ttk.Checkbutton(checks, text="Skip invalid images", variable=settings_skip_invalid).grid(row=1, column=1, sticky="w", pady=(6, 0))
+
+        actions = ttk.Frame(content)
+        actions.grid(row=4, column=0, columnspan=3, sticky="e", pady=(16, 0))
+        ttk.Button(window, text="Cancel", command=window.destroy).grid(row=1, column=0, sticky="e", padx=(0, 104), pady=(0, 16))
+        ttk.Button(
+            window,
+            text="Save",
+            command=lambda: self.save_settings_from_window(
+                window,
+                {
+                    "output_dir": settings_output_dir.get(),
+                    "mode": settings_mode.get(),
+                    "page_size": settings_page_size.get(),
+                    "standardize": settings_standardize.get(),
+                    "sort": settings_sort.get(),
+                    "overwrite": settings_overwrite.get(),
+                    "skip_invalid": settings_skip_invalid.get(),
+                },
+            ),
+        ).grid(row=1, column=0, sticky="e", padx=(0, 16), pady=(0, 16))
+
+    def _choose_settings_output_dir(self, variable: tk.StringVar) -> None:
+        name = filedialog.askdirectory(title="Select default output folder")
+        if name:
+            variable.set(name)
+
+    def save_settings_from_window(self, window: tk.Toplevel, values: dict[str, object]) -> None:
+        output_dir = Path(str(values["output_dir"]).strip() or ".")
+        if not output_dir.exists() or not output_dir.is_dir():
+            messagebox.showerror("Image2pdf", f"Output folder does not exist: {output_dir}")
+            return
+        settings = normalize_settings(values)
+        save_settings(settings)
+        self.apply_settings(settings)
+        window.destroy()
+        self.status.set(f"Settings saved to {SETTINGS_PATH.name}.")
+
+    def apply_settings(self, settings: dict[str, object]) -> None:
+        self.output_dir.set(str(settings["output_dir"]))
+        self.mode.set(str(settings["mode"]))
+        self.page_size.set(str(settings["page_size"]))
+        self.standardize.set(bool(settings["standardize"]))
+        self.sort.set(bool(settings["sort"]))
+        self.overwrite.set(bool(settings["overwrite"]))
+        self.skip_invalid.set(bool(settings["skip_invalid"]))
+
     def show_help(self) -> None:
         messagebox.showinfo(
             "Image2pdf",
@@ -549,6 +674,64 @@ def create_app() -> tuple[tk.Tk, Image2PdfApp]:
 def main() -> None:
     root, _app = create_app()
     root.mainloop()
+
+
+def normalize_settings(values: dict[str, object]) -> dict[str, object]:
+    settings = dict(DEFAULT_SETTINGS)
+    settings.update(values)
+    if settings["mode"] not in {"combined", "split"}:
+        settings["mode"] = DEFAULT_SETTINGS["mode"]
+    if settings["page_size"] not in {"A4", "Letter", "original"}:
+        settings["page_size"] = DEFAULT_SETTINGS["page_size"]
+    for key in ("standardize", "sort", "overwrite", "skip_invalid"):
+        settings[key] = parse_bool(settings[key])
+    settings["output_dir"] = str(settings["output_dir"] or DEFAULT_SETTINGS["output_dir"])
+    return settings
+
+
+def parse_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().casefold() in {"true", "yes", "1", "on"}
+
+
+def load_settings(path: Path = SETTINGS_PATH) -> dict[str, object]:
+    if not path.exists():
+        return dict(DEFAULT_SETTINGS)
+    values: dict[str, object] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        key, raw_value = line.split(":", 1)
+        key = key.strip()
+        raw_value = raw_value.strip()
+        if key not in DEFAULT_SETTINGS:
+            continue
+        if raw_value in {"true", "false"}:
+            values[key] = raw_value == "true"
+        else:
+            try:
+                values[key] = json.loads(raw_value)
+            except json.JSONDecodeError:
+                values[key] = raw_value.strip('"')
+    return normalize_settings(values)
+
+
+def save_settings(settings: dict[str, object], path: Path = SETTINGS_PATH) -> None:
+    normalized = normalize_settings(settings)
+    lines = [
+        "# Image2pdf GUI settings",
+        "# This file is written by the Settings window.",
+    ]
+    for key in DEFAULT_SETTINGS:
+        value = normalized[key]
+        if isinstance(value, bool):
+            rendered = "true" if value else "false"
+        else:
+            rendered = json.dumps(str(value), ensure_ascii=False)
+        lines.append(f"{key}: {rendered}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
