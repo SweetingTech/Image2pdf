@@ -1,0 +1,32 @@
+# Python runtime and cache output
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local tests and generated test data
+test/
+tests/
+test_*.py
+*_test.py
+
+# Local output artifacts
+*.pdf
+image2pdf_settings.yaml
+tmp/
+temp/
+out/
+output/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
